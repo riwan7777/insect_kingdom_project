@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Page Not Found — Insect Kingdom{% endblock %}
+
+{% block content %}
+<section class="py-5">
+  <div class="container text-center">
+    <i class="bi bi-bug ik-404-illustration"></i>
+    <h1 class="display-4 mt-3">This specimen has flown off</h1>
+    <p class="text-muted">The page you're looking for doesn't exist or may have moved.</p>
+    <a href="{{ url_for('home') }}" class="btn ik-btn-primary btn-lg mt-3">Back to Home</a>
+  </div>
+</section>
+{% endblock %}

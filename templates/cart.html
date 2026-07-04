@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Checkout' if checkout_mode else 'Your Cart' }} — Insect Kingdom{% endblock %}
+
+{% block content %}
+<section class="ik-page-header">
+  <div class="container text-center">
+    <h1>{{ 'Checkout' if checkout_mode else 'Your Shopping Cart' }}</h1>
+    <p>{{ 'Review your order before placing it' if checkout_mode else 'Specimens waiting to join your collection' }}</p>
+  </div>
+</section>
+
+<section class="py-5">
+  <div class="container">
+    {% if items %}
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <div class="ik-cart-table">
+          {% for item in items %}
+          <div class="ik-cart-item">
+            <img src="{{ url_for('static', filename='images/' ~ item.image) }}" alt="{{ item.product_name }}">
+            <div class="ik-cart-item-info">
+              <h6>{{ item.product_name }}</h6>
+              <p class="text-muted mb-0">₹{{ "%.2f"|format(item.price) }} each</p>
+            </div>
+
+            {% if not checkout_mode %}
+            <form action="{{ url_for('update_cart_route', cart_id=item.cart_id) }}" method="POST" class="ik-cart-qty">
+              <input type="number" name="quantity" value="{{ item.quantity }}" min="0" max="{{ item.stock }}" class="form-control form-control-sm" aria-label="Update quantity for {{ item.product_name }}">
+              <button type="submit" class="btn btn-sm ik-btn-outline">Update</button>
+            </form>
+            {% else %}
+            <div class="ik-cart-qty"><span>Qty: {{ item.quantity }}</span></div>
+            {% endif %}
+
+            <div class="ik-cart-subtotal">₹{{ "%.2f"|format(item.subtotal) }}</div>
+
+            {% if not checkout_mode %}
+            <a href="{{ url_for('remove_from_cart_route', cart_id=item.cart_id) }}" class="ik-cart-remove" title="Remove" aria-label="Remove {{ item.product_name }} from cart">
+              <i class="bi bi-trash"></i>
+            </a>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="ik-summary-card">
+          <h5 class="mb-4">Order Summary</h5>
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Subtotal</span>
+            <span>₹{{ "%.2f"|format(total) }}</span>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Shipping</span>
+            <span>Free</span>
+          </div>
+          <hr>
+          <div class="d-flex justify-content-between mb-4 fw-bold fs-5">
+            <span>Total</span>
+            <span class="ik-price">₹{{ "%.2f"|format(total) }}</span>
+          </div>
+
+          {% if checkout_mode %}
+          <form action="{{ url_for('checkout') }}" method="POST">
+            <button type="submit" class="btn ik-btn-primary w-100 btn-lg">Place Order</button>
+          </form>
+          <a href="{{ url_for('cart') }}" class="btn ik-btn-outline w-100 mt-2">Back to Cart</a>
+          {% else %}
+          <a href="{{ url_for('checkout') }}" class="btn ik-btn-primary w-100 btn-lg">Proceed to Checkout</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="ik-empty-state">
+      <i class="bi bi-basket2"></i>
+      <h4 class="mt-3">Your cart is empty</h4>
+      <p class="text-muted">Browse the collection to find your next specimen.</p>
+      <a href="{{ url_for('insects') }}" class="btn ik-btn-primary mt-3">Browse Products</a>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

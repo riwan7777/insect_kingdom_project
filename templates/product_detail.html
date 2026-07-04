@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block title %}{{ product.product_name }} — Insect Kingdom{% endblock %}
+{% block meta_description %}{{ (product.short_description or product.description)[:150] }}{% endblock %}
+{% block og_title %}{{ product.product_name }} — Insect Kingdom{% endblock %}
+
+{% block content %}
+<section class="py-5">
+  <div class="container">
+    <nav aria-label="breadcrumb" class="mb-4">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('home') }}">Home</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('insects') }}">Collection</a></li>
+        {% if product.category_name %}<li class="breadcrumb-item"><a href="{{ url_for('insects', category=product.category_id) }}">{{ product.category_name }}</a></li>{% endif %}
+        <li class="breadcrumb-item active" aria-current="page">{{ product.product_name }}</li>
+      </ol>
+    </nav>
+
+    <div class="row g-5">
+      <!-- IMAGE GALLERY -->
+      <div class="col-lg-6">
+        <div class="ik-detail-img-wrap mb-3">
+          <img id="ikMainProductImage" src="{{ url_for('static', filename='images/' ~ product.image) }}" alt="{{ product.product_name }}">
+        </div>
+        {% if gallery %}
+        <div class="d-flex ik-thumb-row overflow-auto">
+          <div class="ik-thumb active" data-gallery-thumb="{{ url_for('static', filename='images/' ~ product.image) }}" tabindex="0" role="button" aria-label="Show main image">
+            <img src="{{ url_for('static', filename='images/' ~ product.image) }}" alt="">
+          </div>
+          {% for g in gallery %}
+          <div class="ik-thumb" data-gallery-thumb="{{ url_for('static', filename='images/' ~ g.image) }}" tabindex="0" role="button" aria-label="Show {{ g.caption }}">
+            <img src="{{ url_for('static', filename='images/' ~ g.image) }}" alt="{{ g.caption }}">
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- INFO -->
+      <div class="col-lg-6">
+        <span class="ik-tag">{{ product.category_name or 'Insect' }}</span>
+        {% if product.badge %}<span class="ik-product-badge gold ms-2" style="position:static; display:inline-block;">{{ product.badge }}</span>{% endif %}
+        <h1 class="mt-2 mb-1">{{ product.product_name }}</h1>
+        <p class="ik-scientific fs-5">{{ product.scientific_name }}</p>
+        <div class="ik-rating mb-2" aria-label="Rated {{ product.rating }} out of 5">
+          {% for i in range(product.rating|round(0, 'floor')|int) %}★{% endfor %}{% for i in range(5 - product.rating|round(0, 'floor')|int) %}☆{% endfor %}
+          <span class="count">{{ product.rating }} · {{ product.review_count }} reviews</span>
+        </div>
+        <h3 class="ik-price my-3">₹{{ "%.2f"|format(product.price) }}</h3>
+        <p class="text-muted">{{ product.short_description or product.description[:160] }}</p>
+
+        <div class="d-flex align-items-center gap-2 mb-4">
+          {% if product.stock > 0 %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">In Stock ({{ product.stock }} available)</span>
+          {% else %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2">Out of Stock</span>
+          {% endif %}
+        </div>
+
+        <div class="d-flex gap-3 align-items-center flex-wrap">
+          <form action="{{ url_for('add_to_cart_route', product_id=product.id) }}" method="POST" class="d-flex gap-3 align-items-center flex-wrap">
+            <input type="number" name="quantity" value="1" min="1" max="{{ product.stock }}" class="form-control ik-qty-input" aria-label="Quantity" {% if product.stock == 0 %}disabled{% endif %}>
+            <button type="submit" class="btn ik-btn-primary btn-lg" {% if product.stock == 0 %}disabled{% endif %}>
+              <i class="bi bi-cart-plus"></i> Add to Cart
+            </button>
+          </form>
+          {% if logged_in %}
+          <form action="{{ url_for('toggle_wishlist_route', product_id=product.id) }}" method="POST">
+            <button type="submit" class="ik-icon-btn {{ 'active' if product.id in wishlist_ids }}" title="Save to wishlist" aria-label="Add to wishlist">
+              <i class="bi {{ 'bi-heart-fill' if product.id in wishlist_ids else 'bi-heart' }}"></i>
+            </button>
+          </form>
+          {% else %}
+          <a href="{{ url_for('login') }}" class="ik-icon-btn" title="Login to save" aria-label="Login to save to wishlist"><i class="bi bi-heart"></i></a>
+          {% endif %}
+        </div>
+
+        <!-- FEATURES -->
+        <ul class="list-unstyled ik-feature-list mt-4">
+          <li><i class="bi bi-check-circle-fill"></i> Ethically sourced and hand-inspected for quality</li>
+          <li><i class="bi bi-check-circle-fill"></i> Ships in a reinforced, cushioned display case</li>
+          <li><i class="bi bi-check-circle-fill"></i> Includes full habitat and life-cycle documentation</li>
+        </ul>
+
+        <!-- SPECIFICATIONS -->
+        <div class="ik-specs mt-4">
+          <h5 class="mb-3">Specifications</h5>
+          <table class="table table-borderless ik-specs-table">
+            <tbody>
+              <tr><th>Common Name</th><td>{{ product.product_name }}</td></tr>
+              <tr><th>Scientific Name</th><td>{{ product.scientific_name }}</td></tr>
+              <tr><th>Category</th><td>{{ product.category_name or '—' }}</td></tr>
+              <tr><th>Stock Available</th><td>{{ product.stock }} units</td></tr>
+              <tr><th>Price</th><td>₹{{ "%.2f"|format(product.price) }}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- FULL DESCRIPTION -->
+    <div class="row mt-5">
+      <div class="col-lg-8">
+        <h4 class="mb-3">Product Description</h4>
+        <p class="text-muted">{{ product.description }}</p>
+      </div>
+    </div>
+
+    <!-- EDUCATIONAL INFORMATION -->
+    {% if product.habitat or product.life_cycle or product.care_instructions or product.fun_facts %}
+    <div class="mt-5">
+      <span class="ik-eyebrow">Educational Information</span>
+      <h3 class="ik-section-title mb-4">Get to Know This Species</h3>
+      <div class="row g-4">
+        {% if product.habitat %}
+        <div class="col-md-6">
+          <div class="ik-edu-card">
+            <div class="ik-edu-icon"><i class="bi bi-geo-alt"></i></div>
+            <h5>Habitat</h5>
+            <p>{{ product.habitat }}</p>
+          </div>
+        </div>
+        {% endif %}
+        {% if product.life_cycle %}
+        <div class="col-md-6">
+          <div class="ik-edu-card">
+            <div class="ik-edu-icon"><i class="bi bi-arrow-repeat"></i></div>
+            <h5>Life Cycle</h5>
+            <p>{{ product.life_cycle }}</p>
+          </div>
+        </div>
+        {% endif %}
+        {% if product.care_instructions %}
+        <div class="col-md-6">
+          <div class="ik-edu-card">
+            <div class="ik-edu-icon"><i class="bi bi-shield-plus"></i></div>
+            <h5>Care Instructions</h5>
+            <p>{{ product.care_instructions }}</p>
+          </div>
+        </div>
+        {% endif %}
+        {% if product.fun_facts %}
+        <div class="col-md-6">
+          <div class="ik-edu-card">
+            <div class="ik-edu-icon"><i class="bi bi-stars"></i></div>
+            <h5>Interesting Facts</h5>
+            <p>{{ product.fun_facts }}</p>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- REVIEWS -->
+    <div class="mt-5">
+      <span class="ik-eyebrow">What Collectors Say</span>
+      <h3 class="ik-section-title mb-4">Customer Reviews</h3>
+      {% if reviews %}
+      <div class="row g-3">
+        {% for review in reviews %}
+        <div class="col-md-6">
+          <div class="ik-review-card">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div class="d-flex align-items-center gap-2">
+                <div class="ik-review-avatar">{{ review.reviewer_name[0] }}</div>
+                <div>
+                  <strong>{{ review.reviewer_name }}</strong>
+                  <div class="ik-rating small">{% for i in range(review.rating|round(0,'floor')|int) %}★{% endfor %}{% for i in range(5 - review.rating|round(0,'floor')|int) %}☆{% endfor %}</div>
+                </div>
+              </div>
+              {% if review.created_at %}<span class="text-muted small">{{ review.created_at.strftime('%d %b %Y') }}</span>{% endif %}
+            </div>
+            <p class="mb-0 text-muted small">{{ review.comment }}</p>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-muted">No reviews yet for this specimen.</p>
+      {% endif %}
+    </div>
+
+    <!-- FREQUENTLY BOUGHT TOGETHER -->
+    {% if bought_together %}
+    <div class="mt-5">
+      <span class="ik-eyebrow">Complete the Collection</span>
+      <h3 class="ik-section-title mb-4">Frequently Bought Together</h3>
+      <div class="row g-4">
+        {% for item in bought_together %}
+        <div class="col-md-6 col-lg-3">
+          <a href="{{ url_for('product_detail', product_id=item.id) }}" class="card ik-card h-100 text-decoration-none">
+            <div class="ik-card-img-wrap">
+              <img src="{{ url_for('static', filename='images/' ~ item.image) }}" class="card-img-top" alt="{{ item.product_name }}" loading="lazy">
+            </div>
+            <div class="card-body">
+              <span class="ik-tag">{{ item.category_name }}</span>
+              <h6 class="mt-1 mb-1">{{ item.product_name }}</h6>
+              <span class="ik-price">₹{{ "%.2f"|format(item.price) }}</span>
+            </div>
+          </a>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- RELATED PRODUCTS -->
+    {% if related %}
+    <div class="mt-5">
+      <span class="ik-eyebrow">You May Also Like</span>
+      <h3 class="ik-section-title mb-4">Related Products</h3>
+      <div class="row g-4">
+        {% for item in related %}
+        <div class="col-md-6 col-lg-3">
+          <a href="{{ url_for('product_detail', product_id=item.id) }}" class="card ik-card h-100 text-decoration-none">
+            <div class="ik-card-img-wrap">
+              <img src="{{ url_for('static', filename='images/' ~ item.image) }}" class="card-img-top" alt="{{ item.product_name }}" loading="lazy">
+            </div>
+            <div class="card-body">
+              <span class="ik-tag">{{ item.category_name }}</span>
+              <h6 class="mt-1 mb-1">{{ item.product_name }}</h6>
+              <span class="ik-price">₹{{ "%.2f"|format(item.price) }}</span>
+            </div>
+          </a>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</section>
+{% endblock %}

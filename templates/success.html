@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Order Success — Insect Kingdom{% endblock %}
+
+{% block content %}
+<section class="py-5">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-6 text-center">
+        <div class="ik-success-card">
+          <i class="bi bi-check-circle-fill ik-success-icon"></i>
+          <h2 class="mt-3 mb-2">Order Placed Successfully!</h2>
+          <p class="text-muted">Thank you for shopping with Insect Kingdom.</p>
+          {% if order_id %}
+          <p class="fw-bold">Order ID: #{{ order_id }}</p>
+          {% endif %}
+          <a href="{{ url_for('insects') }}" class="btn ik-btn-primary btn-lg mt-3">Continue Shopping</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

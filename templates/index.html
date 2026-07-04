@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+{% block title %}Insect Kingdom — Rare Insect Specimens for Collectors & Educators{% endblock %}
+
+{% block content %}
+<!-- HERO -->
+<section class="ik-hero">
+  <div class="container">
+    <div class="row align-items-center min-vh-75 py-5">
+      <div class="col-lg-6">
+        <span class="ik-eyebrow">Welcome to Insect Kingdom</span>
+        <h1 class="ik-hero-title">Discover the World's Most Fascinating Insects</h1>
+        <p class="ik-hero-text">Authentic, ethically-sourced specimens for collectors, educators and nature enthusiasts — each one paired with the habitat, life-cycle and field notes behind it.</p>
+        <div class="d-flex gap-3 flex-wrap">
+          <a href="{{ url_for('insects') }}" class="btn ik-btn-primary btn-lg">Explore the Collection</a>
+          <a href="{{ url_for('about') }}" class="btn ik-btn-outline btn-lg">Our Story</a>
+        </div>
+      </div>
+      <div class="col-lg-6 text-center mt-5 mt-lg-0">
+        <img src="{{ url_for('static', filename='images/banner1.jpg') }}" alt="Curated insect specimens on display" class="ik-hero-img" loading="lazy">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURE STRIP -->
+<section class="ik-features py-4">
+  <div class="container">
+    <div class="row text-center g-4">
+      <div class="col-6 col-md-3">
+        <i class="bi bi-shield-check ik-feature-icon" aria-hidden="true"></i>
+        <p class="mb-0 small fw-500">Authenticity Guaranteed</p>
+      </div>
+      <div class="col-6 col-md-3">
+        <i class="bi bi-truck ik-feature-icon" aria-hidden="true"></i>
+        <p class="mb-0 small fw-500">Safe, Careful Delivery</p>
+      </div>
+      <div class="col-6 col-md-3">
+        <i class="bi bi-award ik-feature-icon" aria-hidden="true"></i>
+        <p class="mb-0 small fw-500">Museum-Grade Specimens</p>
+      </div>
+      <div class="col-6 col-md-3">
+        <i class="bi bi-mortarboard ik-feature-icon" aria-hidden="true"></i>
+        <p class="mb-0 small fw-500">Educational Resources</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURED COLLECTIONS -->
+<section class="py-5">
+  <div class="container">
+    <div class="text-center mb-5">
+      <span class="ik-eyebrow">Explore by World</span>
+      <h2 class="ik-section-title">Featured Collections</h2>
+    </div>
+    <div class="row g-4">
+      <div class="col-6 col-lg-3">
+        <a href="{{ url_for('insects', category=1) }}" class="ik-collection-tile">
+          <img src="{{ url_for('static', filename='images/butterfly.jpg') }}" alt="Butterfly collection" loading="lazy">
+          <div class="ik-collection-overlay">
+            <div><span>4 SPECIMENS</span><h5>Butterflies</h5></div>
+          </div>
+        </a>
+      </div>
+      <div class="col-6 col-lg-3">
+        <a href="{{ url_for('insects', category=2) }}" class="ik-collection-tile">
+          <img src="{{ url_for('static', filename='images/beetle.jpg') }}" alt="Beetle collection" loading="lazy">
+          <div class="ik-collection-overlay">
+            <div><span>1 SPECIMEN</span><h5>Beetles</h5></div>
+          </div>
+        </a>
+      </div>
+      <div class="col-6 col-lg-3">
+        <a href="{{ url_for('insects', category=3) }}" class="ik-collection-tile">
+          <img src="{{ url_for('static', filename='images/bee.jpg') }}" alt="Bee and wasp collection" loading="lazy">
+          <div class="ik-collection-overlay">
+            <div><span>1 SPECIMEN</span><h5>Bees &amp; Wasps</h5></div>
+          </div>
+        </a>
+      </div>
+      <div class="col-6 col-lg-3">
+        <a href="{{ url_for('insects', category=5) }}" class="ik-collection-tile">
+          <img src="{{ url_for('static', filename='images/butterfly-rare2.jpg') }}" alt="Rare and limited edition collection" loading="lazy">
+          <div class="ik-collection-overlay">
+            <div><span>LIMITED</span><h5>Rare Editions</h5></div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- POPULAR PRODUCTS -->
+<section class="py-5">
+  <div class="container">
+    <div class="text-center mb-5">
+      <span class="ik-eyebrow">Handpicked for You</span>
+      <h2 class="ik-section-title">Popular Specimens</h2>
+    </div>
+    <div class="row g-4">
+      {% for product in products %}
+      <div class="col-md-6 col-lg-4">
+        <div class="card ik-card h-100">
+          <div class="ik-card-img-wrap">
+            <img src="{{ url_for('static', filename='images/' ~ product.image) }}" class="card-img-top" alt="{{ product.product_name }}" loading="lazy">
+            {% if product.badge %}<span class="ik-product-badge {{ 'gold' if 'Limited' in product.badge or 'Rare' in product.badge }}">{{ product.badge }}</span>{% endif %}
+            <div class="ik-card-actions">
+              {% if logged_in %}
+              <form action="{{ url_for('toggle_wishlist_route', product_id=product.id) }}" method="POST">
+                <button type="submit" class="ik-icon-btn {{ 'active' if product.id in wishlist_ids }}" title="Save to wishlist" aria-label="Add to wishlist">
+                  <i class="bi {{ 'bi-heart-fill' if product.id in wishlist_ids else 'bi-heart' }}"></i>
+                </button>
+              </form>
+              {% else %}
+              <a href="{{ url_for('login') }}" class="ik-icon-btn" title="Login to save" aria-label="Login to save to wishlist"><i class="bi bi-heart"></i></a>
+              {% endif %}
+            </div>
+            <button class="ik-quickview-btn" data-quickview="{{ product.id }}" aria-label="Quick view {{ product.product_name }}">Quick View</button>
+          </div>
+          <div class="card-body d-flex flex-column">
+            <span class="ik-tag">{{ product.category_name or 'Insect' }}</span>
+            <h5 class="card-title mt-2">{{ product.product_name }}</h5>
+            <div class="ik-rating mb-1" aria-label="Rated {{ product.rating }} out of 5">
+              {% for i in range(product.rating|round(0, 'floor')|int) %}★{% endfor %}{% for i in range(5 - product.rating|round(0, 'floor')|int) %}☆{% endfor %}
+              <span class="count">({{ product.review_count }})</span>
+            </div>
+            <p class="card-text text-muted small flex-grow-1">{{ (product.short_description or product.description)[:80] }}…</p>
+            <div class="d-flex justify-content-between align-items-center mt-2">
+              <span class="ik-price">₹{{ "%.2f"|format(product.price) }}</span>
+              <a href="{{ url_for('product_detail', product_id=product.id) }}" class="btn ik-btn-primary btn-sm">View</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <p class="text-center text-muted">No products available yet.</p>
+      {% endfor %}
+    </div>
+    <div class="text-center mt-5">
+      <a href="{{ url_for('insects') }}" class="btn ik-btn-outline">View Full Collection</a>
+    </div>
+  </div>
+</section>
+
+<!-- WHY CHOOSE US -->
+<section class="py-5" style="background: var(--ik-cream-dark);">
+  <div class="container">
+    <div class="text-center mb-5">
+      <span class="ik-eyebrow">The Insect Kingdom Difference</span>
+      <h2 class="ik-section-title">Why Collectors Choose Us</h2>
+    </div>
+    <div class="row g-4">
+      <div class="col-md-6 col-lg-3">
+        <div class="ik-why-card">
+          <div class="ik-why-icon"><i class="bi bi-patch-check"></i></div>
+          <h6>Verified Sourcing</h6>
+          <p class="text-muted small mb-0">Every specimen is sourced through licensed, conservation-conscious farms and suppliers.</p>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-3">
+        <div class="ik-why-card">
+          <div class="ik-why-icon"><i class="bi bi-journal-richtext"></i></div>
+          <h6>Educational Depth</h6>
+          <p class="text-muted small mb-0">Habitat, life cycle and care information ships with every product — not just a picture.</p>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-3">
+        <div class="ik-why-card">
+          <div class="ik-why-icon"><i class="bi bi-box-seam"></i></div>
+          <h6>Careful Packaging</h6>
+          <p class="text-muted small mb-0">Specimens travel in reinforced, cushioned cases designed to protect delicate wings and shells.</p>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-3">
+        <div class="ik-why-card">
+          <div class="ik-why-icon"><i class="bi bi-people"></i></div>
+          <h6>Community of Enthusiasts</h6>
+          <p class="text-muted small mb-0">Trusted by students, teachers and lifelong collectors around the world.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EDUCATIONAL HIGHLIGHT -->
+<section class="py-5 ik-edu-section">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-5">
+        <span class="ik-eyebrow">More Than a Marketplace</span>
+        <h2 class="ik-section-title mb-3">Learn as You Collect</h2>
+        <p class="text-muted">Every listing includes the same fields a field biologist would care about — natural habitat, full life cycle, and care instructions for keeping your specimen in pristine condition. We built this for people who want to understand what they're holding, not just own it.</p>
+        <a href="{{ url_for('insects') }}" class="btn ik-btn-primary">Start Exploring</a>
+      </div>
+      <div class="col-lg-7">
+        <div class="row g-4">
+          <div class="col-sm-6">
+            <div class="ik-edu-card">
+              <div class="ik-edu-icon"><i class="bi bi-geo-alt"></i></div>
+              <h5>Habitat</h5>
+              <p>Where each species lives in the wild, from rainforest canopies to open meadows.</p>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="ik-edu-card">
+              <div class="ik-edu-icon"><i class="bi bi-arrow-repeat"></i></div>
+              <h5>Life Cycle</h5>
+              <p>Egg to adult — the full metamorphosis story behind every specimen.</p>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="ik-edu-card">
+              <div class="ik-edu-icon"><i class="bi bi-stars"></i></div>
+              <h5>Interesting Facts</h5>
+              <p>Small, surprising details that make each species worth talking about.</p>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="ik-edu-card">
+              <div class="ik-edu-icon"><i class="bi bi-shield-plus"></i></div>
+              <h5>Care Instructions</h5>
+              <p>How to display and preserve your specimen so it lasts a lifetime.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CUSTOMER REVIEWS -->
+<section class="py-5">
+  <div class="container">
+    <div class="text-center mb-5">
+      <span class="ik-eyebrow">From Our Collectors</span>
+      <h2 class="ik-section-title">Customer Reviews</h2>
+    </div>
+    <div class="row g-4">
+      <div class="col-md-4">
+        <div class="ik-testimonial-card">
+          <div class="ik-rating">★★★★★</div>
+          <p class="quote">"Arrived in perfect condition and the colors are even better in person. Great for my classroom display."</p>
+          <div class="d-flex align-items-center gap-2 mt-3">
+            <div class="ik-testimonial-avatar">A</div>
+            <div><strong>Aditi R.</strong><br><span class="text-muted small">Verified Buyer</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="ik-testimonial-card">
+          <div class="ik-rating">★★★★★</div>
+          <p class="quote">"The Blue Morpho is the centerpiece of my collection now. Absolutely gorgeous, and the habitat notes were a nice touch."</p>
+          <div class="d-flex align-items-center gap-2 mt-3">
+            <div class="ik-testimonial-avatar">D</div>
+            <div><strong>Daniel W.</strong><br><span class="text-muted small">Verified Buyer</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="ik-testimonial-card">
+          <div class="ik-rating">★★★★☆</div>
+          <p class="quote">"Great teaching aid — my students were fascinated by the size of the Giant Forest Ant."</p>
+          <div class="d-flex align-items-center gap-2 mt-3">
+            <div class="ik-testimonial-avatar">N</div>
+            <div><strong>Neha K.</strong><br><span class="text-muted small">Verified Buyer</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="ik-cta py-5">
+  <div class="container text-center">
+    <h2 class="text-white mb-3">Start Your Collection Today</h2>
+    <p class="text-light-50 mb-4">Join thousands of collectors who trust Insect Kingdom for premium, well-documented specimens.</p>
+    <a href="{{ url_for('insects') }}" class="btn ik-btn-primary btn-lg">Explore Products</a>
+  </div>
+</section>
+{% endblock %}

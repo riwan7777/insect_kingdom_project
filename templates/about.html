@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}About Us — Insect Kingdom{% endblock %}
+{% block meta_description %}Learn about Insect Kingdom's mission to make the insect world accessible to collectors, students and educators.{% endblock %}
+
+{% block content %}
+<section class="ik-page-header">
+  <div class="container text-center">
+    <h1>About Insect Kingdom</h1>
+    <p>Passionate about the incredible world of insects</p>
+  </div>
+</section>
+
+<section class="py-5">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-6">
+        <img src="{{ url_for('static', filename='images/banner2.jpg') }}" class="img-fluid rounded-4" alt="Insect Kingdom workshop and specimen preparation" loading="lazy">
+      </div>
+      <div class="col-lg-6">
+        <span class="ik-eyebrow">Our Story</span>
+        <h2 class="ik-section-title mb-3">Connecting People With Nature's Smallest Wonders</h2>
+        <p class="text-muted">Insect Kingdom was founded with a simple mission: to make the extraordinary diversity of the insect world accessible to collectors, students, and curious minds everywhere. Every specimen in our collection is ethically sourced and carefully preserved to retain its natural beauty.</p>
+        <p class="text-muted">From the vivid wings of rare butterflies to the armored shells of beetles, each piece tells a story of evolution and adaptation. We work closely with conservation-focused suppliers to ensure sustainability remains at the heart of everything we do.</p>
+      </div>
+    </div>
+
+    <div class="row align-items-center g-5 mt-3 flex-lg-row-reverse">
+      <div class="col-lg-6">
+        <img src="{{ url_for('static', filename='images/banner3.jpg') }}" class="img-fluid rounded-4" alt="Insect Kingdom educational field notes" loading="lazy">
+      </div>
+      <div class="col-lg-6">
+        <span class="ik-eyebrow">Our Approach</span>
+        <h2 class="ik-section-title mb-3">Education First, Always</h2>
+        <p class="text-muted">We believe a specimen is worth more when you understand it. That's why every product page includes the habitat, life cycle, and care information you'd expect from a field guide — written to be read, not skimmed.</p>
+        <p class="text-muted">Whether you're a lifelong collector, a teacher building a classroom display, or a student discovering entomology for the first time, Insect Kingdom is built to meet you where you are.</p>
+      </div>
+    </div>
+
+    <div class="row text-center mt-5 g-4">
+      <div class="col-md-4">
+        <div class="ik-stat-card">
+          <h2 class="ik-price">500+</h2>
+          <p class="text-muted mb-0">Species Catalogued</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="ik-stat-card">
+          <h2 class="ik-price">10K+</h2>
+          <p class="text-muted mb-0">Happy Collectors</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="ik-stat-card">
+          <h2 class="ik-price">15+</h2>
+          <p class="text-muted mb-0">Years of Expertise</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
