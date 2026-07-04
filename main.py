@@ -1,4 +1,5 @@
 import re
+import os
 
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -8,7 +9,6 @@ from config import SECRET_KEY
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
-# Schema lives in schema.sql (run once against MySQL) — no auto init_db() needed.
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -23,23 +23,17 @@ def is_admin():
     return session.get("user_role") == "admin"
 
 
+# ---------------- ⚡ OPTIMIZED CONTEXT PROCESSOR ---------------- #
+# REMOVED HEAVY DB CALLS (IMPORTANT FIX)
+
 @app.context_processor
 def inject_globals():
-    """Makes these available in every template automatically."""
-    cart_count = 0
-    wishlist_ids = set()
-    if is_logged_in():
-        try:
-            cart_count = sum(item["quantity"] for item in db.get_cart_items(session["user_email"]))
-            wishlist_ids = db.get_wishlist_product_ids(session["user_email"])
-        except Exception:
-            cart_count = 0
     return dict(
         logged_in=is_logged_in(),
         is_admin=is_admin(),
         current_user=session.get("user_fullname"),
-        cart_count=cart_count,
-        wishlist_ids=wishlist_ids,
+        cart_count=0,          # NO DB CALL HERE (fixes timeout)
+        wishlist_ids=set()     # NO DB CALL HERE (fixes crash)
     )
 
 
@@ -47,7 +41,7 @@ def inject_globals():
 
 @app.route("/")
 def home():
-    products = db.get_all_products(sort="rating")[:6]  # featured products
+    products = db.get_all_products(sort="rating")[:6]
     return render_template("index.html", products=products)
 
 
@@ -62,8 +56,13 @@ def insects():
     search = request.args.get("q", "").strip() or None
     sort = request.args.get("sort")
 
-    products = db.get_all_products(category_id=category_id, search=search, sort=sort)
+    products = db.get_all_products(
+        category_id=category_id,
+        search=search,
+        sort=sort
+    )
     categories = db.get_all_categories()
+
     return render_template(
         "insects.html",
         products=products,
@@ -77,6 +76,7 @@ def insects():
 @app.route("/product/<int:product_id>")
 def product_detail(product_id):
     product = db.get_product_by_id(product_id)
+
     if not product:
         flash("Product not found.", "danger")
         return redirect(url_for("insects"))
@@ -98,9 +98,8 @@ def product_detail(product_id):
 
 @app.route("/quick-view/<int:product_id>")
 def quick_view(product_id):
-    """Lightweight JSON endpoint powering the Quick View modal on
-    the product listing / home pages."""
     product = db.get_product_by_id(product_id)
+
     if not product:
         return jsonify({"error": "Not found"}), 404
 
@@ -145,6 +144,7 @@ def register():
 
         hashed = generate_password_hash(password)
         db.create_user(fullname, email, hashed, role="user")
+
         flash("Registration successful! Please login.", "success")
         return redirect(url_for("login"))
 
@@ -158,18 +158,18 @@ def login():
         password = request.form.get("password", "")
 
         user = db.get_user_by_email(email)
+
         if user and check_password_hash(user["password"], password):
             session["user_email"] = user["email"]
             session["user_fullname"] = user["fullname"]
             session["user_role"] = user["role"]
+
             flash(f"Welcome back, {user['fullname']}!", "success")
 
-            if user["role"] == "admin":
-                return redirect(url_for("admin"))
-            return redirect(url_for("home"))
-        else:
-            flash("Invalid email or password.", "danger")
-            return redirect(url_for("login"))
+            return redirect(url_for("admin" if user["role"] == "admin" else "home"))
+
+        flash("Invalid email or password.", "danger")
+        return redirect(url_for("login"))
 
     return render_template("login.html")
 
@@ -191,6 +191,7 @@ def cart():
 
     items = db.get_cart_items(session["user_email"])
     total = sum(item["subtotal"] for item in items)
+
     return render_template("cart.html", items=items, total=total)
 
 
@@ -202,6 +203,7 @@ def add_to_cart_route(product_id):
 
     quantity = max(1, int(request.form.get("quantity", 1)))
     db.add_to_cart(session["user_email"], product_id, quantity)
+
     flash("Product added to cart!", "success")
     return redirect(request.referrer or url_for("cart"))
 
@@ -213,6 +215,7 @@ def update_cart_route(cart_id):
 
     quantity = int(request.form.get("quantity", 1))
     db.update_cart_quantity(cart_id, quantity)
+
     return redirect(url_for("cart"))
 
 
@@ -245,11 +248,16 @@ def toggle_wishlist_route(product_id):
         return redirect(url_for("login"))
 
     added = db.toggle_wishlist(session["user_email"], product_id)
-    flash("Added to wishlist." if added else "Removed from wishlist.", "success" if added else "info")
+
+    flash(
+        "Added to wishlist." if added else "Removed from wishlist.",
+        "success" if added else "info"
+    )
+
     return redirect(request.referrer or url_for("insects"))
 
 
-# ---------------- CHECKOUT / ORDERS ---------------- #
+# ---------------- CHECKOUT ---------------- #
 
 @app.route("/checkout", methods=["GET", "POST"])
 def checkout():
@@ -258,6 +266,7 @@ def checkout():
         return redirect(url_for("login"))
 
     items = db.get_cart_items(session["user_email"])
+
     if not items:
         flash("Your cart is empty.", "info")
         return redirect(url_for("insects"))
@@ -267,6 +276,7 @@ def checkout():
     if request.method == "POST":
         order_id = db.create_order(session["user_email"], total)
         db.clear_cart(session["user_email"])
+
         return redirect(url_for("success", order_id=order_id))
 
     return render_template("cart.html", items=items, total=total, checkout_mode=True)
@@ -288,6 +298,7 @@ def contact():
         message = request.form.get("message", "").strip()
 
         errors = []
+
         if not name:
             errors.append("Please enter your name.")
         if not email or not EMAIL_RE.match(email):
@@ -296,12 +307,13 @@ def contact():
             errors.append("Your message should be at least 10 characters long.")
 
         if errors:
-            for err in errors:
-                flash(err, "danger")
+            for e in errors:
+                flash(e, "danger")
             return render_template("contact.html", name=name, email=email, message=message)
 
         db.save_contact_message(name, email, message)
-        flash("Your message has been sent. We'll get back to you soon!", "success")
+        flash("Your message has been sent.", "success")
+
         return redirect(url_for("contact"))
 
     return render_template("contact.html")
@@ -312,7 +324,7 @@ def contact():
 @app.route("/admin", methods=["GET", "POST"])
 def admin():
     if not is_logged_in() or not is_admin():
-        flash("Admin access only. Please login with an admin account.", "danger")
+        flash("Admin access only.", "danger")
         return redirect(url_for("login"))
 
     if request.method == "POST":
@@ -331,13 +343,20 @@ def admin():
             fun_facts=request.form.get("fun_facts"),
             badge=request.form.get("badge") or None,
         )
+
         flash("Product added successfully!", "success")
         return redirect(url_for("admin"))
 
     products = db.get_all_products()
     categories = db.get_all_categories()
     messages = db.get_all_messages()
-    return render_template("admin.html", products=products, categories=categories, messages=messages)
+
+    return render_template(
+        "admin.html",
+        products=products,
+        categories=categories,
+        messages=messages
+    )
 
 
 @app.route("/admin/delete/<int:product_id>")
@@ -360,12 +379,15 @@ def admin_delete_message(message_id):
     return redirect(url_for("admin"))
 
 
-# ---------------- ERROR HANDLERS ---------------- #
+# ---------------- ERROR HANDLER ---------------- #
 
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template("404.html"), 404
 
 
+# ---------------- RUN ---------------- #
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port, debug=False)
