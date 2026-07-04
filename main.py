@@ -23,8 +23,8 @@ def is_admin():
     return session.get("user_role") == "admin"
 
 
-# ---------------- ⚡ OPTIMIZED CONTEXT PROCESSOR ---------------- #
-# REMOVED HEAVY DB CALLS (IMPORTANT FIX)
+# ---------------- ⚡ FIXED CONTEXT PROCESSOR ---------------- #
+# ❌ NO DB CALLS HERE (this was crashing your server)
 
 @app.context_processor
 def inject_globals():
@@ -32,12 +32,12 @@ def inject_globals():
         logged_in=is_logged_in(),
         is_admin=is_admin(),
         current_user=session.get("user_fullname"),
-        cart_count=0,          # NO DB CALL HERE (fixes timeout)
-        wishlist_ids=set()     # NO DB CALL HERE (fixes crash)
+        cart_count=0,
+        wishlist_ids=set()
     )
 
 
-# ---------------- CORE PAGES ---------------- #
+# ---------------- CORE ---------------- #
 
 @app.route("/")
 def home():
@@ -56,11 +56,7 @@ def insects():
     search = request.args.get("q", "").strip() or None
     sort = request.args.get("sort")
 
-    products = db.get_all_products(
-        category_id=category_id,
-        search=search,
-        sort=sort
-    )
+    products = db.get_all_products(category_id=category_id, search=search, sort=sort)
     categories = db.get_all_categories()
 
     return render_template(
@@ -81,18 +77,13 @@ def product_detail(product_id):
         flash("Product not found.", "danger")
         return redirect(url_for("insects"))
 
-    gallery = db.get_product_gallery(product_id)
-    reviews = db.get_product_reviews(product_id)
-    related = db.get_related_products(product_id, product["category_id"])
-    bought_together = db.get_frequently_bought_together(product_id, product["category_id"])
-
     return render_template(
         "product_detail.html",
         product=product,
-        gallery=gallery,
-        reviews=reviews,
-        related=related,
-        bought_together=bought_together,
+        gallery=db.get_product_gallery(product_id),
+        reviews=db.get_product_reviews(product_id),
+        related=db.get_related_products(product_id, product["category_id"]),
+        bought_together=db.get_frequently_bought_together(product_id, product["category_id"]),
     )
 
 
@@ -131,7 +122,7 @@ def register():
             return redirect(url_for("register"))
 
         if not EMAIL_RE.match(email):
-            flash("Please enter a valid email address.", "danger")
+            flash("Invalid email address.", "danger")
             return redirect(url_for("register"))
 
         if len(password) < 6:
@@ -139,13 +130,13 @@ def register():
             return redirect(url_for("register"))
 
         if db.get_user_by_email(email):
-            flash("Email already registered. Please login.", "warning")
+            flash("Email already registered.", "warning")
             return redirect(url_for("login"))
 
         hashed = generate_password_hash(password)
         db.create_user(fullname, email, hashed, role="user")
 
-        flash("Registration successful! Please login.", "success")
+        flash("Registration successful!", "success")
         return redirect(url_for("login"))
 
     return render_template("register.html")
@@ -164,11 +155,10 @@ def login():
             session["user_fullname"] = user["fullname"]
             session["user_role"] = user["role"]
 
-            flash(f"Welcome back, {user['fullname']}!", "success")
-
+            flash("Login successful!", "success")
             return redirect(url_for("admin" if user["role"] == "admin" else "home"))
 
-        flash("Invalid email or password.", "danger")
+        flash("Invalid credentials.", "danger")
         return redirect(url_for("login"))
 
     return render_template("login.html")
@@ -177,7 +167,7 @@ def login():
 @app.route("/logout")
 def logout():
     session.clear()
-    flash("You have been logged out.", "info")
+    flash("Logged out successfully.", "info")
     return redirect(url_for("home"))
 
 
@@ -186,7 +176,6 @@ def logout():
 @app.route("/cart")
 def cart():
     if not is_logged_in():
-        flash("Please login to view your cart.", "warning")
         return redirect(url_for("login"))
 
     items = db.get_cart_items(session["user_email"])
@@ -198,13 +187,12 @@ def cart():
 @app.route("/add-to-cart/<int:product_id>", methods=["POST"])
 def add_to_cart_route(product_id):
     if not is_logged_in():
-        flash("Please login to add items to your cart.", "warning")
         return redirect(url_for("login"))
 
-    quantity = max(1, int(request.form.get("quantity", 1)))
-    db.add_to_cart(session["user_email"], product_id, quantity)
+    qty = max(1, int(request.form.get("quantity", 1)))
+    db.add_to_cart(session["user_email"], product_id, qty)
 
-    flash("Product added to cart!", "success")
+    flash("Added to cart!", "success")
     return redirect(request.referrer or url_for("cart"))
 
 
@@ -213,8 +201,8 @@ def update_cart_route(cart_id):
     if not is_logged_in():
         return redirect(url_for("login"))
 
-    quantity = int(request.form.get("quantity", 1))
-    db.update_cart_quantity(cart_id, quantity)
+    qty = int(request.form.get("quantity", 1))
+    db.update_cart_quantity(cart_id, qty)
 
     return redirect(url_for("cart"))
 
@@ -225,7 +213,7 @@ def remove_from_cart_route(cart_id):
         return redirect(url_for("login"))
 
     db.remove_from_cart(cart_id)
-    flash("Item removed from cart.", "info")
+    flash("Item removed.", "info")
     return redirect(url_for("cart"))
 
 
@@ -234,26 +222,22 @@ def remove_from_cart_route(cart_id):
 @app.route("/wishlist")
 def wishlist():
     if not is_logged_in():
-        flash("Please login to view your wishlist.", "warning")
         return redirect(url_for("login"))
 
-    items = db.get_wishlist_items(session["user_email"])
-    return render_template("wishlist.html", items=items)
+    return render_template(
+        "wishlist.html",
+        items=db.get_wishlist_items(session["user_email"])
+    )
 
 
 @app.route("/toggle-wishlist/<int:product_id>", methods=["POST"])
 def toggle_wishlist_route(product_id):
     if not is_logged_in():
-        flash("Please login to save items to your wishlist.", "warning")
         return redirect(url_for("login"))
 
     added = db.toggle_wishlist(session["user_email"], product_id)
 
-    flash(
-        "Added to wishlist." if added else "Removed from wishlist.",
-        "success" if added else "info"
-    )
-
+    flash("Added" if added else "Removed", "success" if added else "info")
     return redirect(request.referrer or url_for("insects"))
 
 
@@ -262,13 +246,12 @@ def toggle_wishlist_route(product_id):
 @app.route("/checkout", methods=["GET", "POST"])
 def checkout():
     if not is_logged_in():
-        flash("Please login to checkout.", "warning")
         return redirect(url_for("login"))
 
     items = db.get_cart_items(session["user_email"])
 
     if not items:
-        flash("Your cart is empty.", "info")
+        flash("Cart is empty.", "info")
         return redirect(url_for("insects"))
 
     total = sum(item["subtotal"] for item in items)
@@ -276,7 +259,6 @@ def checkout():
     if request.method == "POST":
         order_id = db.create_order(session["user_email"], total)
         db.clear_cart(session["user_email"])
-
         return redirect(url_for("success", order_id=order_id))
 
     return render_template("cart.html", items=items, total=total, checkout_mode=True)
@@ -284,8 +266,7 @@ def checkout():
 
 @app.route("/success")
 def success():
-    order_id = request.args.get("order_id")
-    return render_template("success.html", order_id=order_id)
+    return render_template("success.html", order_id=request.args.get("order_id"))
 
 
 # ---------------- CONTACT ---------------- #
@@ -297,22 +278,12 @@ def contact():
         email = request.form.get("email", "").strip()
         message = request.form.get("message", "").strip()
 
-        errors = []
-
-        if not name:
-            errors.append("Please enter your name.")
-        if not email or not EMAIL_RE.match(email):
-            errors.append("Please enter a valid email address.")
-        if not message or len(message) < 10:
-            errors.append("Your message should be at least 10 characters long.")
-
-        if errors:
-            for e in errors:
-                flash(e, "danger")
-            return render_template("contact.html", name=name, email=email, message=message)
+        if not name or not EMAIL_RE.match(email) or len(message) < 10:
+            flash("Invalid input.", "danger")
+            return render_template("contact.html")
 
         db.save_contact_message(name, email, message)
-        flash("Your message has been sent.", "success")
+        flash("Message sent!", "success")
 
         return redirect(url_for("contact"))
 
@@ -324,7 +295,6 @@ def contact():
 @app.route("/admin", methods=["GET", "POST"])
 def admin():
     if not is_logged_in() or not is_admin():
-        flash("Admin access only.", "danger")
         return redirect(url_for("login"))
 
     if request.method == "POST":
@@ -344,49 +314,21 @@ def admin():
             badge=request.form.get("badge") or None,
         )
 
-        flash("Product added successfully!", "success")
+        flash("Product added!", "success")
         return redirect(url_for("admin"))
-
-    products = db.get_all_products()
-    categories = db.get_all_categories()
-    messages = db.get_all_messages()
 
     return render_template(
         "admin.html",
-        products=products,
-        categories=categories,
-        messages=messages
+        products=db.get_all_products(),
+        categories=db.get_all_categories(),
+        messages=db.get_all_messages()
     )
 
-
-@app.route("/admin/delete/<int:product_id>")
-def admin_delete_product(product_id):
-    if not is_logged_in() or not is_admin():
-        return redirect(url_for("login"))
-
-    db.delete_product(product_id)
-    flash("Product deleted.", "info")
-    return redirect(url_for("admin"))
-
-
-@app.route("/admin/delete-message/<int:message_id>")
-def admin_delete_message(message_id):
-    if not is_logged_in() or not is_admin():
-        return redirect(url_for("login"))
-
-    db.delete_message(message_id)
-    flash("Message deleted.", "info")
-    return redirect(url_for("admin"))
-
-
-# ---------------- ERROR HANDLER ---------------- #
 
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template("404.html"), 404
 
-
-# ---------------- RUN ---------------- #
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
